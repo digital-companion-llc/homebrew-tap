@@ -1,0 +1,29 @@
+name: Bump casks
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  timetug:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump to the latest stable release
+        id: bump
+        run: echo "result=$(scripts/bump-cask.sh timetug darkarena1/timetug)" >> "$GITHUB_OUTPUT"
+      - name: Open a PR
+        if: startsWith(steps.bump.outputs.result, 'bumped ')
+        run: |
+          v="${{ steps.bump.outputs.result }}"; v="${v#bumped }"
+          branch="bump/timetug-$v"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git commit -am "timetug $v"
+          git push -f origin "$branch"
+          gh pr create --title "timetug $v" --body "Automated bump to the latest stable TimeTug release." --base main --head "$branch" || true
